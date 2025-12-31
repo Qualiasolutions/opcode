@@ -50,7 +50,7 @@ const listen = tauriListen || ((eventName: string, callback: (event: any) => voi
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { TimelineNavigator } from "./TimelineNavigator";
+import { TimelineSidebarContainer } from "./TimelineSidebarContainer";
 import { CheckpointSettings } from "./CheckpointSettings";
 import { SlashCommandsManager } from "./SlashCommandsManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -1633,7 +1633,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           )}
         </ErrorBoundary>
 
-        {/* Timeline */}
+        {/* Timeline with Audio Integration */}
         <AnimatePresence>
           {showTimeline && effectiveSession && (
             <motion.div
@@ -1643,34 +1643,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed right-0 top-0 h-full w-full sm:w-96 bg-background border-l border-border shadow-xl z-30 overflow-hidden"
             >
-              <div className="h-full flex flex-col">
-                {/* Timeline Header */}
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h3 className="text-lg font-semibold">Session Timeline</h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowTimeline(false)}
-                    className="h-8 w-8"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {/* Timeline Content */}
-                <div className="flex-1 overflow-y-auto p-4">
-                  <TimelineNavigator
-                    sessionId={effectiveSession.id}
-                    projectId={effectiveSession.project_id}
-                    projectPath={projectPath}
-                    currentMessageIndex={messages.length - 1}
-                    onCheckpointSelect={handleCheckpointSelect}
-                    onFork={handleFork}
-                    onCheckpointCreated={handleCheckpointCreated}
-                    refreshVersion={timelineVersion}
-                  />
-                </div>
-              </div>
+              <TimelineSidebarContainer
+                sessionId={effectiveSession.id}
+                projectId={effectiveSession.project_id}
+                projectPath={projectPath}
+                currentMessageIndex={messages.length - 1}
+                onCheckpointSelect={handleCheckpointSelect}
+                onFork={handleFork}
+                onCheckpointCreated={handleCheckpointCreated}
+                refreshVersion={timelineVersion}
+                onClose={() => setShowTimeline(false)}
+              />
             </motion.div>
           )}
         </AnimatePresence>

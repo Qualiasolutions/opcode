@@ -333,11 +333,135 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
 
     // Create trigger to update the updated_at timestamp
     conn.execute(
-        "CREATE TRIGGER IF NOT EXISTS update_app_settings_timestamp 
-         AFTER UPDATE ON app_settings 
+        "CREATE TRIGGER IF NOT EXISTS update_app_settings_timestamp
+         AFTER UPDATE ON app_settings
          FOR EACH ROW
          BEGIN
              UPDATE app_settings SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
+         END",
+        [],
+    )?;
+
+    // =====================================================
+    // Eleven Labs Audio Integration Tables
+    // =====================================================
+
+    // Voice profiles table (local cache of Eleven Labs voices)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS voice_profiles (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            category TEXT NOT NULL DEFAULT 'premade',
+            provider TEXT NOT NULL DEFAULT 'elevenlabs',
+            provider_voice_id TEXT,
+            labels TEXT,
+            preview_url TEXT,
+            settings_stability REAL DEFAULT 0.5,
+            settings_similarity_boost REAL DEFAULT 0.75,
+            settings_style REAL DEFAULT 0.0,
+            settings_use_speaker_boost INTEGER DEFAULT 1,
+            is_synced INTEGER DEFAULT 0,
+            local_audio_path TEXT,
+            supabase_id TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )?;
+
+    // Character voice mappings (link characters to voice profiles)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS character_voices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL UNIQUE,
+            voice_profile_id TEXT NOT NULL,
+            project_id TEXT,
+            notes TEXT,
+            is_synced INTEGER DEFAULT 0,
+            supabase_id TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (voice_profile_id) REFERENCES voice_profiles(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // Generated audio cache (TTS, SFX, Music)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS audio_cache (
+            id TEXT PRIMARY KEY,
+            audio_type TEXT NOT NULL,
+            input_text TEXT,
+            voice_profile_id TEXT,
+            model_id TEXT,
+            local_file_path TEXT NOT NULL,
+            file_size INTEGER,
+            duration_ms INTEGER,
+            generation_params TEXT,
+            cost_usd REAL,
+            is_synced INTEGER DEFAULT 0,
+            supabase_storage_path TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )?;
+
+    // Eleven Labs API usage tracking
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS eleven_labs_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            operation TEXT NOT NULL,
+            voice_id TEXT,
+            characters_used INTEGER,
+            cost_usd REAL,
+            request_timestamp TEXT NOT NULL,
+            response_time_ms INTEGER,
+            success INTEGER DEFAULT 1,
+            error_message TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )?;
+
+    // Eleven Labs settings (API key storage)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS eleven_labs_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )?;
+
+    // Create triggers for Eleven Labs tables
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS update_voice_profiles_timestamp
+         AFTER UPDATE ON voice_profiles
+         FOR EACH ROW
+         BEGIN
+             UPDATE voice_profiles SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+         END",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS update_character_voices_timestamp
+         AFTER UPDATE ON character_voices
+         FOR EACH ROW
+         BEGIN
+             UPDATE character_voices SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+         END",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS update_eleven_labs_settings_timestamp
+         AFTER UPDATE ON eleven_labs_settings
+         FOR EACH ROW
+         BEGIN
+             UPDATE eleven_labs_settings SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
          END",
         [],
     )?;
