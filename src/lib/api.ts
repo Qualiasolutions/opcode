@@ -417,6 +417,78 @@ export interface SlashCommand {
   accepts_arguments: boolean;
 }
 
+// ========== Eleven Labs Audio Types ==========
+
+/**
+ * Voice settings for TTS generation
+ */
+export interface VoiceSettings {
+  stability: number;
+  similarity_boost: number;
+  style?: number;
+  use_speaker_boost?: boolean;
+}
+
+/**
+ * Voice profile from Eleven Labs
+ */
+export interface VoiceProfile {
+  voice_id: string;
+  name: string;
+  description?: string;
+  category: string;
+  labels?: Record<string, string>;
+  preview_url?: string;
+  settings: VoiceSettings;
+}
+
+/**
+ * Character to voice mapping
+ */
+export interface CharacterVoice {
+  id: string;
+  character_name: string;
+  voice_id: string;
+  voice_name: string;
+  project_id?: string;
+  created_at: string;
+}
+
+/**
+ * Type of generated audio
+ */
+export type AudioType = 'tts' | 'sfx' | 'music';
+
+/**
+ * Generated audio result
+ */
+export interface GeneratedAudio {
+  id: string;
+  audio_type: AudioType;
+  prompt: string;
+  duration_seconds: number;
+  local_path: string;
+  supabase_url?: string;
+  metadata: Record<string, any>;
+  created_at: string;
+}
+
+/**
+ * Eleven Labs usage information
+ */
+export interface ElevenLabsUsageInfo {
+  character_count: number;
+  character_limit: number;
+  can_extend_character_limit: boolean;
+  allowed_to_extend_character_limit: boolean;
+  next_character_count_reset_unix: number;
+  voice_limit: number;
+  professional_voice_limit: number;
+  can_extend_voice_limit: boolean;
+  can_use_instant_voice_cloning: boolean;
+  can_use_professional_voice_cloning: boolean;
+}
+
 /**
  * Result of adding a server
  */
@@ -1938,6 +2010,220 @@ export const api = {
       return await apiCall<string>("slash_command_delete", { commandId, projectPath });
     } catch (error) {
       console.error("Failed to delete slash command:", error);
+      throw error;
+    }
+  },
+
+  // ========== Eleven Labs Audio API ==========
+
+  /**
+   * Sets the Eleven Labs API key
+   * @param apiKey - The API key to set
+   * @returns Promise resolving to true if valid
+   */
+  async elevenLabsSetApiKey(apiKey: string): Promise<boolean> {
+    try {
+      return await apiCall<boolean>("eleven_labs_set_api_key", { apiKey });
+    } catch (error) {
+      console.error("Failed to set Eleven Labs API key:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Checks if Eleven Labs API key is configured
+   * @returns Promise resolving to true if configured
+   */
+  async elevenLabsHasApiKey(): Promise<boolean> {
+    try {
+      return await apiCall<boolean>("eleven_labs_has_api_key");
+    } catch (error) {
+      console.error("Failed to check Eleven Labs API key:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Lists all available Eleven Labs voices
+   * @returns Promise resolving to array of voice profiles
+   */
+  async elevenLabsListVoices(): Promise<VoiceProfile[]> {
+    try {
+      return await apiCall<VoiceProfile[]>("eleven_labs_list_voices");
+    } catch (error) {
+      console.error("Failed to list Eleven Labs voices:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Clones a voice from audio files
+   * @param name - Name for the cloned voice
+   * @param files - Array of file paths to audio samples
+   * @param description - Optional description
+   * @param labels - Optional labels object
+   * @returns Promise resolving to the cloned voice profile
+   */
+  async elevenLabsCloneVoice(
+    name: string,
+    files: string[],
+    description?: string,
+    labels?: Record<string, string>
+  ): Promise<VoiceProfile> {
+    try {
+      return await apiCall<VoiceProfile>("eleven_labs_clone_voice", {
+        name,
+        files,
+        description,
+        labels,
+      });
+    } catch (error) {
+      console.error("Failed to clone voice:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes an Eleven Labs voice
+   * @param voiceId - The voice ID to delete
+   */
+  async elevenLabsDeleteVoice(voiceId: string): Promise<void> {
+    try {
+      await apiCall<void>("eleven_labs_delete_voice", { voiceId });
+    } catch (error) {
+      console.error("Failed to delete voice:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generates text-to-speech audio
+   * @param text - The text to convert to speech
+   * @param voiceId - The voice ID to use
+   * @param modelId - Optional model ID
+   * @param voiceSettings - Optional voice settings
+   * @returns Promise resolving to generated audio info
+   */
+  async elevenLabsTTS(
+    text: string,
+    voiceId: string,
+    modelId?: string,
+    voiceSettings?: VoiceSettings
+  ): Promise<GeneratedAudio> {
+    try {
+      return await apiCall<GeneratedAudio>("eleven_labs_tts", {
+        text,
+        voiceId,
+        modelId,
+        voiceSettings,
+      });
+    } catch (error) {
+      console.error("Failed to generate TTS:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generates sound effects
+   * @param text - Description of the sound effect
+   * @param durationSeconds - Optional duration (default 3s)
+   * @param promptInfluence - Optional prompt influence (0-1)
+   * @returns Promise resolving to generated audio info
+   */
+  async elevenLabsGenerateSFX(
+    text: string,
+    durationSeconds?: number,
+    promptInfluence?: number
+  ): Promise<GeneratedAudio> {
+    try {
+      return await apiCall<GeneratedAudio>("eleven_labs_generate_sfx", {
+        text,
+        durationSeconds,
+        promptInfluence,
+      });
+    } catch (error) {
+      console.error("Failed to generate SFX:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets Eleven Labs usage information
+   * @returns Promise resolving to usage info
+   */
+  async elevenLabsGetUsage(): Promise<ElevenLabsUsageInfo> {
+    try {
+      return await apiCall<ElevenLabsUsageInfo>("eleven_labs_get_usage");
+    } catch (error) {
+      console.error("Failed to get Eleven Labs usage:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Assigns a voice to a character
+   * @param characterName - Name of the character
+   * @param voiceId - Voice ID to assign
+   * @param voiceName - Name of the voice
+   * @param projectId - Optional project ID
+   * @returns Promise resolving to the character voice mapping
+   */
+  async assignVoiceToCharacter(
+    characterName: string,
+    voiceId: string,
+    voiceName: string,
+    projectId?: string
+  ): Promise<CharacterVoice> {
+    try {
+      return await apiCall<CharacterVoice>("assign_voice_to_character", {
+        characterName,
+        voiceId,
+        voiceName,
+        projectId,
+      });
+    } catch (error) {
+      console.error("Failed to assign voice to character:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Lists all character voice mappings
+   * @param projectId - Optional project ID to filter by
+   * @returns Promise resolving to array of character voice mappings
+   */
+  async listCharacterVoices(projectId?: string): Promise<CharacterVoice[]> {
+    try {
+      return await apiCall<CharacterVoice[]>("list_character_voices", { projectId });
+    } catch (error) {
+      console.error("Failed to list character voices:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets cached audio records
+   * @param audioType - Type of audio: 'tts', 'sfx', or 'music'
+   * @returns Promise resolving to array of generated audio records
+   */
+  async getCachedAudio(audioType: 'tts' | 'sfx' | 'music'): Promise<GeneratedAudio[]> {
+    try {
+      return await apiCall<GeneratedAudio[]>("get_cached_audio", { audioType });
+    } catch (error) {
+      console.error("Failed to get cached audio:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a cached audio record
+   * @param audioId - The audio ID to delete
+   */
+  async deleteCachedAudio(audioId: string): Promise<void> {
+    try {
+      await apiCall<void>("delete_cached_audio", { audioId });
+    } catch (error) {
+      console.error("Failed to delete cached audio:", error);
       throw error;
     }
   },

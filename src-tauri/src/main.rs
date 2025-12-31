@@ -36,6 +36,12 @@ use commands::mcp::{
     mcp_serve, mcp_test_connection,
 };
 
+use commands::eleven_labs::{
+    assign_voice_to_character, delete_cached_audio, eleven_labs_clone_voice,
+    eleven_labs_delete_voice, eleven_labs_generate_sfx, eleven_labs_get_usage,
+    eleven_labs_has_api_key, eleven_labs_list_voices, eleven_labs_set_api_key,
+    eleven_labs_tts, get_cached_audio, list_character_voices, ElevenLabsState,
+};
 use commands::proxy::{apply_proxy_settings, get_proxy_settings, save_proxy_settings};
 use commands::storage::{
     storage_delete_row, storage_execute_sql, storage_insert_row, storage_list_tables,
@@ -146,6 +152,9 @@ fn main() {
 
             // Initialize Claude process state
             app.manage(ClaudeProcessState::default());
+
+            // Initialize Eleven Labs state
+            app.manage(ElevenLabsState::new());
 
             // Apply window vibrancy with rounded corners on macOS
             #[cfg(target_os = "macos")]
@@ -289,6 +298,19 @@ fn main() {
             // Proxy Settings
             get_proxy_settings,
             save_proxy_settings,
+            // Eleven Labs Audio
+            eleven_labs_set_api_key,
+            eleven_labs_has_api_key,
+            eleven_labs_list_voices,
+            eleven_labs_clone_voice,
+            eleven_labs_delete_voice,
+            eleven_labs_tts,
+            eleven_labs_generate_sfx,
+            eleven_labs_get_usage,
+            assign_voice_to_character,
+            list_character_voices,
+            get_cached_audio,
+            delete_cached_audio,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
